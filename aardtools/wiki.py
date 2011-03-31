@@ -24,7 +24,7 @@ try:
 except ImportError:
     import simplejson as json
 
-from mwlib import uparser, xhtmlwriter
+from mwlib import uparser, xhtmlwriter, advtree
 from mwlib.log import Log
 Log.logfile = None
 
@@ -48,9 +48,9 @@ import mwaardhtmlwriter as writer
 
 lic_dir = os.path.join(os.path.dirname(__file__), 'licenses')
 
-known_licenses = {"Creative Commons Attribution-Share Alike 3.0 Unported": 
+known_licenses = {"Creative Commons Attribution-Share Alike 3.0 Unported":
                   os.path.join(lic_dir, "ccasau-3.0.txt"),
-                  "GNU Free Documentation License 1.2": 
+                  "GNU Free Documentation License 1.2":
                   os.path.join(lic_dir, "gfdl-1.2.txt")}
 
 wikidb = None
@@ -114,6 +114,7 @@ def convert(title):
                                        lang=wikidb.lang,
                                        magicwords=wikidb.siteinfo['magicwords'])
         xhtmlwriter.preprocess(mwobject)
+        fix_Unicode_template(mwobject)
         text, tags, languagelinks = writer.convert(mwobject, rtl=wikidb.rtl)
     except EmptyArticleError:
         raise
@@ -123,6 +124,24 @@ def convert(title):
     else:
         return title, tojson((text.rstrip(), tags)), False, languagelinks
 
+#this is a quick hack to fix incorrect "Unicode" template expansion
+#in Wiktionary
+def fix_Unicode_template(mwobject):
+    for c in mwobject.children:
+        if c.children:
+            start, end = None, None
+            for i, ch in enumerate(c.children):                
+                if ch.asText().strip() == u'< class="Unicode">':
+                    start = i
+                elif ch.asText().strip() == u'</>':
+                    end = i
+            if not start is None and not end is None:
+                other_children = c.children[start+1:end]
+                i = advtree.Italic()
+                i.attributes['class'] = 'Unicode'
+                i.children = other_children
+                c.children[start:end+1] = [i]
+        fix_Unicode_template(c)
 
 class BadRedirect(ConvertError): pass
 
@@ -222,7 +241,7 @@ class Wiki(WikiDB):
     def normalize_and_get_image_path(self, name):
         assert isinstance(name, basestring)
         name = unicode(name)
-        
+
         ns, partial, fqname = self.nshandler.splitname(name, defaultns=6)
         if ns != 6:
             return
@@ -252,6 +271,7 @@ def collect_articles(input_file, options, compiler):
 siteinfo_loaded = False
 
 def load_siteinfo(filename):
+    global siteinfo_loaded
     if siteinfo_loaded:
         return mwlib.siteinfo.get_siteinfo(None)
     if not filename:
@@ -263,7 +283,6 @@ def load_siteinfo(filename):
 
     with open(filename) as f:
         siteinfo = json.load(f)
-        global siteinfo_loaded
         siteinfo_loaded = True
 
     mwlib.siteinfo.get_siteinfo = lambda lang: siteinfo
@@ -313,25 +332,25 @@ class WikiParser():
 
         if license_file:
             with open(license_file) as f:
-                log.info('Using license text from %s', license_file)            
+                log.info('Using license text from %s', license_file)
                 license_text = f.read()
-                self.consumer.add_metadata('license', license_text)            
-                
+                self.consumer.add_metadata('license', license_text)
+
         if options.copyright:
             copyright_file = options.copyright
             with open(copyright_file) as f:
-                log.info('Using copyright text from %s', copyright_file)            
+                log.info('Using copyright text from %s', copyright_file)
                 copyright_text = f.read()
-                self.consumer.add_metadata('copyright', copyright_text)                        
+                self.consumer.add_metadata('copyright', copyright_text)
 
         self.consumer.add_metadata("title", sitename)
         if options.dict_ver:
-            self.consumer.add_metadata("version", 
-                                       "-".join((options.dict_ver, 
+            self.consumer.add_metadata("version",
+                                       "-".join((options.dict_ver,
                                                  options.dict_update)))
         server = general_siteinfo['server']
         self.consumer.add_metadata("source", server)
-        self.consumer.add_metadata("description", default_description % dict(server=server, 
+        self.consumer.add_metadata("description", default_description % dict(server=server,
                                                                              title=sitename))
 
         self.lang = wiki_lang

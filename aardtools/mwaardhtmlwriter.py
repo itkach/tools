@@ -179,6 +179,7 @@ class XHTMLWriter(MWXHTMLWriter):
             return SkipChildren()
         return MWXHTMLWriter.xwriteGenericElement(self, obj)
 
+    xwriteItalic = xwriteGenericElement
     xwriteEmphasized = xwriteGenericElement
     xwriteStrong = xwriteGenericElement
     xwriteSmall = xwriteGenericElement
