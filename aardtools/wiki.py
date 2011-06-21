@@ -56,7 +56,7 @@ known_licenses = {"Creative Commons Attribution-Share Alike 3.0 Unported":
 wikidb = None
 log = logging.getLogger('wiki')
 
-def _create_wikidb(cdbdir, lang, rtl):
+def _create_wikidb(cdbdir, lang, rtl=False):
     global wikidb
     wikidb = Wiki(cdbdir, lang, rtl)
 
@@ -96,7 +96,27 @@ def mkredirect(title, redirect_target):
     meta = {u'r': redirect_target}
     return title, tojson(('', [], meta)), True, None
 
-def convert(title):
+import re
+text_filters = [re.compile(r"<div><h2>References\s*</h2>(<p>\s*</p>)*</div>"),
+                re.compile(r"<div><h2>Images\s*</h2>(<p>\s*</p>)*</div>"),
+                re.compile(r"<div><h2>Gallery\s*</h2>(<p>\s*</p>)*</div>"),
+                re.compile(r"<div><h2>Other [Pp]ages\s*</h2>(<p>\s*</p>)*</div>"),
+                re.compile(r"<div><h2>Other [Ww]ebsites\s*</h2>(<p>\s*</p>)*</div>"),
+                re.compile(r'\{\{<a href="Template:enwp based">enwp based</a>\}\}'),
+                re.compile(r"<div><h3>Pronunciation\s*</h3>(<p>\s*</p>)*</div>"),
+                re.compile(r"<div><h4>Translations\s*</h4>(<p>\s*</p>)*</div>"),
+                re.compile(r"<div><h4>See also\s*</h4>(<p>\s*</p>)*</div>"),
+                re.compile(r"<div><h3>See also\s*</h3>(<p>\s*</p>)*</div>"),
+                ]
+
+text_filters += [re.compile(r"<p><strong>Ähnliche Wörter:</strong>\s*</p>")]
+
+unicode_class_re1 = re.compile(r'&lt;i class=\"Unicode\"&gt;(.*?)&lt;\/i&gt;')
+unicode_class_re2 = re.compile(r'&lt; class=\"Unicode\"&gt;(.*?)&lt;\/&gt;')
+
+def convert(title, filters=None):
+    if filters is None:
+        filters = text_filters
     gc.collect()
     try:
         text = wikidb.reader[title]
@@ -116,6 +136,13 @@ def convert(title):
         xhtmlwriter.preprocess(mwobject)
         fix_Unicode_template(mwobject)
         text, tags, languagelinks = writer.convert(mwobject, rtl=wikidb.rtl)
+
+        for fltr in filters:
+            text = fltr.sub('', text)
+
+        text = unicode_class_re1.sub(lambda m: '<i class="Unicode">%s</i>' % m.group(1), text)
+        text = unicode_class_re2.sub(lambda m: '<span class="Unicode">%s</span>' % m.group(1), text)
+
     except EmptyArticleError:
         raise
     except Exception:
@@ -130,10 +157,11 @@ def fix_Unicode_template(mwobject):
     for c in mwobject.children:
         if c.children:
             start, end = None, None
-            for i, ch in enumerate(c.children):                
-                if ch.asText().strip() == u'< class="Unicode">':
+            for i, ch in enumerate(c.children):
+                ch_as_text = ch.asText().strip()
+                if ch_as_text == u'< class="Unicode">':
                     start = i
-                elif ch.asText().strip() == u'</>':
+                elif ch_as_text == u'</>':
                     end = i
             if not start is None and not end is None:
                 other_children = c.children[start+1:end]

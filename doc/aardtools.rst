@@ -253,8 +253,8 @@ Tools issue tracker`_.
 .. _Aard Tools issue tracker: http://github.com/aarddict/tools/issues
 
 
-Release Notes
-=============
+Changes
+=======
 
 0.8.3
 -----
@@ -396,7 +396,4 @@ Release Notes
   dictionary metadata by default
 
 - Improve memory usage (:tools-issue:`4`)
-
-
-
 

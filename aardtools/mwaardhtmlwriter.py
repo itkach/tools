@@ -13,7 +13,7 @@ import tex
 EXCLUDE_CLASSES = frozenset(('navbox', 'collapsible', 'autocollapse',
                              'plainlinksneverexpand', 'navbar', 'metadata',
                              'navigation-box', 'stub', 'template-documentation',
-                             'portal', 'NavFrame', 'NavHead', 'NavContent', 'thumbinner',
+                             'portal', 'thumbinner',
                              'thumbcaption', 'magnify', 'vertical-navbox',
                              'tmbox', 'maptable', 'printonly',
                              'fmbox', 'ombox', 'cmbox', 'sisterproject', 
@@ -23,9 +23,15 @@ EXCLUDE_CLASSES = frozenset(('navbox', 'collapsible', 'autocollapse',
                              'itwiki_template_avviso', #itwiki
                              'itwiki_template_toc',
                              'itwiki_template_disclaimer_v',
+                             'interProjectTemplate', 'zusterprojectsjab', 
+                             'catlinks', 'noprint',
+                             'sister-project', 'audiotable', 'toc',
+                             'checktrans', 'floatright'
                              ))
 
-EXCLUDED_IDS = frozenset(('interProject',))
+EXCLUDED_IDS = frozenset(('interProject', 'navigation-box', 'Vorlage_Uberarbeiten', 
+                          'sisterproject', 'catlinks', 'commonscat', 'commonslink', 
+                          'commonsinfopict'))
 
 log = logging.getLogger(__name__)
 
